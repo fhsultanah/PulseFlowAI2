@@ -4,8 +4,6 @@
 
 مساعد ذكي يساعد الطوارئ تتجهّز للزحام قبل ما يصير، ويوفّر على الطبيب وقت كتابة الملاحظات.
 
-مشروع فريق **Synapse** في هاكاثون MEDATHON ضمن المنتدى السعودي للشباب للرعاية الصحية (SYHF)، المسار الأول: إدارة الازدحام وتدفق المرضى.
-
 ## وش المشكلة؟
 
 الطوارئ ممكن تمتلئ فجأة، والطاقم غالبًا يعرف إن فيه ضغط بعد ما يبدأ. وبنفس الوقت، الطبيب يقضي جزء كبير من وقته في الكتابة والتوثيق بدل ما يكون مع المريض. والنتيجة تأخير في الرعاية، وأحيانًا ملفات ناقصة.
@@ -57,11 +55,9 @@ python -m unittest discover -s tests
 
 ---
 
-# PulseFlow AI (English)
+# PulseFlow AI 
 
 A smart assistant that helps emergency departments get ready for a rush before it happens, and gives doctors time back from paperwork.
-
-Built by Team **Synapse** for MEDATHON at the Saudi Youth Healthcare Forum (SYHF), Track 1: Healthcare Crowd & Patient Flow Management.
 
 ## The problem
 
