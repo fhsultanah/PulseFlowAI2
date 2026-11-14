@@ -93,7 +93,7 @@ input[type=range]{width:100%;accent-color:var(--cy)}
 /* ===== DEMO ACCESS (not real authentication). Change the judges' login here ===== */
 const DEMO_ACCESS = {user:"judge", pass:"pulseflow2026"};
 /* Backend: set API_BASE below. When empty or unreachable the page runs on built-in demo data. */
-const API_BASE = "";   // e.g. "http://localhost:8000" when the backend runs. Empty = mock mode (no install needed).
+const API_BASE = """;   // e.g. "http://localhost:8000" when the backend runs. Empty = mock mode (no install needed).
 let live = false;
 async function call(path, opts){
   if(!API_BASE) throw new Error("mock");
