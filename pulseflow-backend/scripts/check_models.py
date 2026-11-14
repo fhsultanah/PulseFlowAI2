@@ -68,7 +68,7 @@ def check_scribe(r):
                 continue
             if not (isinstance(c["code"], str) and ICD.match(c["code"])):
                 errs.append(f"icd10[{i}].code '{c['code']}' does not look like an ICD-10 code")
-            if not (num(c["confidence"]) and 0 <= c["confidence"] <= 1):
+            if c["confidence"] is not None and not (num(c["confidence"]) and 0 <= c["confidence"] <= 1):
                 errs.append(f"icd10[{i}].confidence must be a number between 0 and 1")
     gaps = r.get("gaps")
     if not isinstance(gaps, list):
@@ -81,19 +81,24 @@ def check_scribe(r):
 
 
 def load(module, func, use_mock):
-    if use_mock:
-        if module == "forecast_model":
-            from app.services import forecast
-            return forecast._mock
-        from app.services import scribe
-        return scribe._mock
-    try:
-        return getattr(importlib.import_module(f"app.ml.{module}"), func)
-    except ModuleNotFoundError as e:
-        print(f"  FAIL  app/ml/{module}.py not found or missing import: {e}")
-    except AttributeError:
-        print(f"  FAIL  app/ml/{module}.py has no function '{func}'")
-    return None
+    """Goes through the same service layer the API uses (including normalization)."""
+    from app import config
+    if module == "forecast_model":
+        from app.services import forecast
+        config.FORECAST_MOCK = use_mock
+        return lambda h: forecast.predict(h)[0]
+    from app.services import scribe
+    config.SCRIBE_MOCK = use_mock
+    if not use_mock:
+        try:
+            m = importlib.import_module(f"app.ml.{module}")
+        except ModuleNotFoundError as e:
+            print(f"  FAIL  app/ml/{module}.py not found or missing import: {e}")
+            return None
+        if not hasattr(m, func):
+            print(f"  FAIL  app/ml/{module}.py has no function '{func}'")
+            return None
+    return scribe.generate
 
 
 def main():
@@ -122,7 +127,13 @@ def main():
     else:
         for i, text in enumerate(SAMPLES, 1):
             try:
-                errs = check_scribe(fn(text))
+                out = fn(text)
+                errs = check_scribe(out)
+                if not errs:
+                    if any(c["confidence"] is None for c in out["icd10"]):
+                        print("        note: some ICD-10 suggestions have no confidence (null)")
+                    if any(not g["ar"] for g in out["gaps"]):
+                        print("        note: some gaps have no Arabic text yet")
             except Exception as e:
                 errs = [f"generate() raised {type(e).__name__}: {e}"]
             print(f"  {'PASS' if not errs else 'FAIL'}  sample {i}")

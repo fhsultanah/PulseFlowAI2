@@ -71,13 +71,13 @@ class Soap(BaseModel):
 class IcdSuggestion(BaseModel):
     code: str
     description: str
-    confidence: float
+    confidence: float | None = None  # null when the model gives no confidence
 
 
 class DocGap(BaseModel):
     field: str
     en: str
-    ar: str
+    ar: str = ""  # empty until the model provides Arabic text
 
 
 class ScribeResponse(BaseModel):

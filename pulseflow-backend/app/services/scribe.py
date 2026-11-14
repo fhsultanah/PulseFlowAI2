@@ -66,8 +66,56 @@ def _mock(transcript):
     return {"soap": soap, "icd10": icd, "gaps": gaps}
 
 
+GAP_FIELDS = (
+    ("vitals", ("vital", "heart rate", "blood pressure", "temperature", "oxygen", "respiratory")),
+    ("allergies", ("allerg",)),
+    ("medications", ("medication", "drug")),
+    ("history", ("history", "risk factor")),
+    ("symptom_details", ("duration", "onset", "severity", "character")),
+    ("plan", ("plan", "follow-up", "follow up", "management")),
+)
+SOAP_KEYS = ("subjective", "objective", "assessment", "plan")
+
+
+def _guess_field(text):
+    low = text.lower()
+    for field, words in GAP_FIELDS:
+        if any(w in low for w in words):
+            return field
+    return "other"
+
+
+def normalize(result):
+    """Safety net: coerce whatever the model returned into the API contract.
+    Never invents values: unknown confidence stays null, missing Arabic stays empty."""
+    result = result if isinstance(result, dict) else {}
+    raw_soap = result.get("soap") if isinstance(result.get("soap"), dict) else {}
+    soap = {k: str(raw_soap.get(k) or "").strip() or "Not documented" for k in SOAP_KEYS}
+
+    icd = []
+    for c in result.get("icd10") or []:
+        if not isinstance(c, dict) or not str(c.get("code") or "").strip():
+            continue
+        conf = c.get("confidence")
+        ok = isinstance(conf, (int, float)) and not isinstance(conf, bool) and 0 <= conf <= 1
+        icd.append({"code": str(c["code"]).strip(),
+                    "description": str(c.get("description") or "").strip(),
+                    "confidence": float(conf) if ok else None})
+
+    gaps = []
+    for g in result.get("gaps") or []:
+        if isinstance(g, str) and g.strip():
+            gaps.append({"field": _guess_field(g), "en": g.strip(), "ar": ""})
+        elif isinstance(g, dict):
+            en = str(g.get("en") or g.get("message") or "").strip()
+            if en:
+                gaps.append({"field": str(g.get("field") or _guess_field(en)),
+                             "en": en, "ar": str(g.get("ar") or "")})
+    return {"soap": soap, "icd10": icd, "gaps": gaps}
+
+
 def generate(transcript):
     if not config.SCRIBE_MOCK:
         model = importlib.import_module("app.ml.scribe_model")
-        return {**model.generate(transcript), "source": "model"}
+        return {**normalize(model.generate(transcript)), "source": "model"}
     return {**_mock(transcript), "source": "mock"}
