@@ -15,7 +15,7 @@ def predict(hours: int) -> list[dict]:
         t = start + timedelta(hours=i)
         # Pattern simulating peak hours and daily volume fluctuations
         v = 12 + 7 * math.sin(2 * math.pi * (t.hour - 12) / 24) + rnd.uniform(-1.5, 1.5)
-        spread = 1.5 + 0.25 * i
+        spread = 1.5 + 0.25 * 1
         
         points.append({
             "time": t.isoformat(timespec="minutes"),
