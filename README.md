@@ -1,4 +1,4 @@
-# PulseFlow Backend
+# PulseFlow 
 
 مشروع **PulseFlow** هو نظام خلفية برمجية (Backend) مبني باستخدام **FastAPI**، مخصص لدعم خدمات الطوارئ الطبية والتنبؤ بالازدحام (Surge forecasting)، تحويل النصوص الطبية إلى ملاحظات SOAP واقتراح رموز التشخيص الدولية (ICD-10)، وإجراء محاكاة لإدارة الموارد والطاقة الاستيعابية[span_0](start_span)[span_0](end_span)[span_1](start_span)[span_1](end_span)[span_2](start_span)[span_2](end_span)[span_3](start_span)[span_3](end_span)[span_4](start_span)[span_4](end_span)[span_5](start_span)[span_5](end_span).
 
