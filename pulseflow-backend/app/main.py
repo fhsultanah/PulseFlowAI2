@@ -3,7 +3,9 @@ from datetime import datetime
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import config, db
+import config
+import db
+import schemas
 from .schemas import (AlertOut, ForecastResponse, ScribeRequest, ScribeResponse,
                       SimulateRequest, SimulateResponse, StatusUpdate)
 from .services import alerts as alert_svc

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PulseFlow AI</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;600&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{ /* ===== THEME: midnight navy + Sehhaty-logo teal/cyan/pink. Change colors here only ===== */
+ --bg:#060E1B;--p1:#0B1930;--p2:#102541;--line:#1C3452;--tx:#E7F1F8;--mu:#8CA5BA;--teal:#3FB5B2;--cy:#5CE1F2;--pk:#F2709C;--am:#F5B84B;
+ --c1:#F2709C;--c2:#F5A04B;--c3:#F2D15C;--c4:#3FB5B2;--c5:#6399C5;--risk:var(--teal);--spd:6s;--glow:#0F2D4D;--lfbg:rgba(11,25,48,.78);--on-cy:#04141F;color-scheme:dark}
+:root[data-theme=light]{--bg:#F3F7FA;--p1:#FFFFFF;--p2:#E8F0F5;--line:#D5E1EA;--tx:#0F2236;--mu:#53697C;--teal:#1F8F8C;--cy:#0A7C8C;--pk:#C43C73;--am:#9A6A0F;--glow:#CFE8F0;--lfbg:rgba(255,255,255,.85);--on-cy:#FFFFFF;color-scheme:light}
+*{box-sizing:border-box}html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 "IBM Plex Sans","IBM Plex Sans Arabic",system-ui,sans-serif}
+h1,h2,h3{font-family:"Space Grotesk","IBM Plex Sans",sans-serif;margin:0;font-weight:600}
+button,input{font:inherit;color:inherit}button{cursor:pointer}[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--cy);outline-offset:2px}
+.num{font-family:"Space Grotesk",sans-serif;font-variant-numeric:tabular-nums}.mu{color:var(--mu)}
+.pulse{overflow:hidden;position:relative}.pulse svg{display:block;animation:slide var(--spd) linear infinite}
+.pulse path{fill:none;stroke:var(--risk);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 6px var(--risk))}
+@keyframes slide{to{transform:translateX(-50%)}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+#login{min-height:100vh;display:grid;grid-template-columns:1.3fr 1fr;position:relative;overflow:hidden;background:radial-gradient(900px 520px at 18% 35%,var(--glow) 0,transparent 62%),var(--bg)}
+.lv{position:relative;padding:48px 56px;display:flex;flex-direction:column;justify-content:space-between;min-height:100vh}
+.lv h2{font-size:clamp(34px,5.2vw,64px);line-height:1.04;max-width:10em;position:relative}.lv h2 em{font-style:normal;color:var(--cy)}
+.lv>.pulse{position:absolute;left:0;right:0;top:55%;height:70px}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Space Grotesk","IBM Plex Sans",system-ui,sans-serif;font-weight:600;font-size:18px}.brand b{color:var(--cy)}
+.lf{align-self:center;justify-self:center;width:calc(100% - 48px);max-width:420px;padding:34px;border:1px solid var(--line);border-radius:18px;background:var(--lfbg);backdrop-filter:blur(10px)}
+.lf label{display:block;font-size:13px;color:var(--mu);margin:16px 0 6px}
+.lf input{width:100%;padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:10px}
+.lf input:focus{border-color:var(--cy)}
+.err{color:var(--pk);font-size:14px;min-height:22px;margin:12px 0 0}.shake{animation:sh .35s}@keyframes sh{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.btn{background:var(--cy);color:var(--on-cy);border:0;border-radius:10px;padding:11px 18px;font-weight:600}.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.g{background:transparent;color:var(--cy);border:1px solid var(--cy)}.btn.s{padding:5px 12px;font-size:13px}.lf .btn{width:100%;margin-top:6px}
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;border:1px solid var(--am);color:var(--am);margin-left:8px;vertical-align:middle;letter-spacing:.02em}
+.tag.ai{border-color:var(--cy);color:var(--cy)}.tag.ok{border-color:var(--teal);color:var(--teal)}
+#app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+aside{background:var(--p1);border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh}
+aside .brand{padding:0 10px 18px}
+.nav{display:flex;align-items:center;gap:10px;background:none;border:0;border-radius:10px;padding:10px 12px;color:var(--mu);text-align:left;width:100%}
+.nav:hover{background:var(--p2);color:var(--tx)}.nav[aria-current=page]{background:var(--p2);color:var(--cy);box-shadow:inset 3px 0 var(--cy)}
+.sp{flex:1}.tg{width:auto!important;position:absolute;top:18px;right:22px}.me{font-size:13px;color:var(--mu);padding:8px 12px}
+.top{display:flex;align-items:center;gap:20px;padding:16px 28px;border-bottom:1px solid var(--line);flex-wrap:wrap}.top .pulse{width:200px;height:34px}
+.top h1{font-size:22px}.top .sp{flex:1}
+.pill{font-size:12px;padding:4px 10px;border-radius:99px;border:1px solid var(--line);color:var(--mu)}.pill.live{border-color:var(--teal);color:var(--teal)}
+main{padding:22px 28px 40px;max-width:1240px}
+.panel{background:var(--p1);border:1px solid var(--line);border-radius:16px;padding:20px}
+.lbl{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);margin-bottom:12px}
+.two{display:grid;gap:16px;grid-template-columns:1.6fr 1fr;margin-bottom:16px}.three{display:grid;gap:16px;grid-template-columns:repeat(3,1fr);margin-bottom:16px}
+.cc{display:grid;gap:16px;grid-template-columns:240px 1.4fr 1fr;margin-bottom:16px}
+.ring{display:grid;place-items:center;position:relative}.ring .v{position:absolute;text-align:center}.ring .v b{display:block;font-size:38px;line-height:1}
+.beds{display:grid;grid-template-columns:repeat(auto-fill,minmax(26px,1fr));gap:6px}.beds i{height:26px;border-radius:6px;border:1px solid var(--line);transition:background .4s}
+.strip{display:flex;gap:26px;flex-wrap:wrap;margin-top:14px}.strip b{display:block;font-size:26px;line-height:1.1}.strip span{font-size:12px;color:var(--mu)}
+.alert{border-left:3px solid var(--risk);padding:6px 0 6px 14px;margin-bottom:14px}.alert b{font-size:18px}
+.stack{display:flex;height:16px;border-radius:8px;overflow:hidden;margin:6px 0 10px}.stack i{display:block;transition:width .5s}
+.key{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--mu)}.key s{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;text-decoration:none}
+.meter{margin:10px 0}.meter div.t{height:8px;background:var(--p2);border-radius:5px;overflow:hidden;margin-top:4px}.meter i{display:block;height:100%;border-radius:5px;background:var(--teal);transition:width .5s}.meter.bad i{background:var(--pk)}
+.q{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.dot{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#04141F;font-weight:700;font-size:13px}.late{color:var(--pk)}
+.cw{overflow-x:auto}.cw svg{display:block;width:100%;min-width:560px;height:auto}
+input[type=range]{width:100%;accent-color:var(--cy)}
+.ctl{margin:14px 0}.ctl label{display:flex;justify-content:space-between;font-size:14px}.ctl output{color:var(--cy);font-weight:600}
+.strip .rk{color:#04141F;font-size:13px}.rk{display:inline-block;padding:3px 12px;border-radius:99px;font-weight:600;font-size:13px;color:#04141F}
+.scn h3{font-size:16px;margin-bottom:8px;min-height:44px}.rec{font-size:13px;margin:6px 0;color:var(--tx)}.ar{direction:rtl;display:block;color:var(--mu)}
+.tr{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-height:200px;margin-bottom:14px;line-height:1.9}.tr p{margin:0 0 6px;animation:fi .4s}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}}
+.blk{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}.blk h3{font-size:14px;color:var(--cy);display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}.blk p{margin:0;font-size:14px}
+.blk.done{border-color:var(--teal)}table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--mu);font-weight:500;font-size:12px}
+.chk{display:flex;gap:8px;font-size:14px;margin:4px 0}.empty{color:var(--mu);padding:30px 6px;text-align:center}
+@media(max-width:980px){#login{grid-template-columns:1fr}.lv{min-height:44vh;padding:28px}.lv .pulse{top:60%}#app{grid-template-columns:1fr}aside{position:static;height:auto;flex-direction:row;flex-wrap:wrap;padding:10px}aside .brand,.me,.sp{display:none}.cc,.two,.three{grid-template-columns:1fr}.top,main{padding-left:16px;padding-right:16px}}
+</style>
+</head>
+<body>
+<div id="login">
+ <button class="nav tg" id="th2"></button><div class="lv"><div class="brand"><span class="pulse" style="width:46px;height:22px;display:inline-block"></span><span>Pulse<b>Flow</b> AI</span></div>
+  <div class="pulse" id="lp"></div>
+  <div><h2>See the surge <em>before</em> it walks in.</h2><p class="mu" style="max-width:34em">Emergency department forecasting and clinical documentation.</p></div></div>
+ <div style="display:grid"><div class="lf" id="lf"><span class="tag" style="margin:0">Demonstration environment</span>
+  <h2 style="margin:16px 0 4px;font-size:26px">Welcome</h2><p class="mu" style="margin:0">Sign in with the demo credentials.</p>
+  <label for="u">Username</label><input id="u" autocomplete="off" spellcheck="false">
+  <label for="pw">Password</label><input id="pw" type="password" autocomplete="off">
+  <p class="err" id="err" role="alert"></p><button class="btn" id="go">Enter command center</button>
+  <p class="mu" style="font-size:12px;margin:14px 0 0">Demo access only. All data is synthetic.</p></div></div>
+</div>
+<div id="app" hidden>
+ <aside><div class="brand"><span>Pulse<b>Flow</b> AI</span></div>
+  <button class="nav" data-v="cc"></button><button class="nav" data-v="flow"></button><button class="nav" data-v="res"></button><button class="nav" data-v="sc"></button>
+  <div class="sp"></div><button class="nav" id="th"></button><div class="me"><span class="pill" id="mode">Demo mode</span><br><br>Demo account</div><button class="nav" id="out"></button></aside>
+ <div><div class="top"><h1 id="ttl"></h1><div class="pulse" id="tp" aria-hidden="true"></div><span class="sp"></span><span class="tag" style="margin:0">Simulated data</span></div>
+  <main id="view"><p class="mu">Loading…</p></main></div>
+</div>
+<script>
+/* ===== DEMO ACCESS (not real authentication). Change the judges' login here ===== */
+const DEMO_ACCESS = {user:"judge", pass:"pulseflow2026"};
+/* Backend: set API_BASE below. When empty or unreachable the page runs on built-in demo data. */
+const API_BASE = "";   // e.g. "http://localhost:8000" when the backend runs. Empty = mock mode (no install needed).
+let live = false;
+async function call(path, opts){
+  if(!API_BASE) throw new Error("mock");
+  const c = new AbortController(), t = setTimeout(() => c.abort(), 4000);
+  try{ const r = await fetch(API_BASE+path, {...opts, signal:c.signal}); if(!r.ok) throw new Error(r.status); live = true; return await r.json(); }
+  finally{ clearTimeout(t); }
+}
+const post = (path, body) => call(path, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+const API = {
+  async forecast(){ try{ return await call("/forecast?hours=24"); }catch(e){ live = false; return mockForecast(); } },
+  async simulate(req){ try{ return await post("/simulate", req); }catch(e){ return mockSimulate(req); } },
+  async transcribe(blob){
+    if(!API_BASE) throw new Error("mock");
+    const fd = new FormData(); fd.append("file", blob, "visit.webm");
+    const c = new AbortController(), t = setTimeout(() => c.abort(), 30000);
+    try{ const r = await fetch(API_BASE+"/transcribe", {method:"POST", body:fd, signal:c.signal}); if(!r.ok) throw new Error(r.status); return (await r.json()).text; }
+    finally{ clearTimeout(t); }
+  },
+  async scribe(text){ try{ return await post("/scribe", {transcript:text}); }catch(e){ return mockScribe(text); } },
+  async check(){ try{ return await post("/alerts/check?hours=12", {}); }catch(e){ return {triggered:false, reason:"mock_mode"}; } },
+  async alerts(){ try{ return await call("/alerts"); }catch(e){ return mockAlerts(); } }
+};
+
+/* ===== MOCK COPY of the backend's forecast mock (same pattern and threshold). Replaced by GET /forecast ===== */
+function mockForecast(){
+  const start = new Date(); start.setMinutes(0,0,0);
+  let s = 42; const rnd = () => (s = (s*1664525 + 1013904223) % 4294967296) / 4294967296;
+  const points = [];
+  for(let i=1; i<=24; i++){
+    const t = new Date(start.getTime()+i*3600000);
+    const v = 12 + 7*Math.sin(2*Math.PI*(t.getHours()-12)/24) + (rnd()*3-1.5), sp = 1.5+0.25*i, r1 = x => Math.round(x*10)/10;
+    points.push({time:t.toISOString(), expected:r1(v), lower:r1(Math.max(v-sp,0)), upper:r1(v+sp)});
+  }
+  return {generated_at:new Date().toISOString(), source:"mock", threshold:18, points};
+}
+/* ===== MOCK COPY of the backend's simulate.py (same placeholder numbers) so screenshots match the live API. Replaced by POST /simulate ===== */
+function mockSimulate(req){
+  const L=[1,2,3,4,5], MIX={1:.02,2:.13,3:.40,4:.35,5:.10}, WT={1:4,2:2.5,3:1.5,4:1,5:.5};
+  const ex={}; let used=0;
+  L.forEach(l => { ex[l]=Math.floor(req.extra_patients*MIX[l]); used+=ex[l]; });
+  L.slice().sort((x,y) => (req.extra_patients*MIX[y]-ex[y])-(req.extra_patients*MIX[x]-ex[x])).slice(0, req.extra_patients-used).forEach(l => ex[l]++);
+  const counts={}; let load=0, total=0;
+  L.forEach(l => { counts[l]=(req.patients_by_ctas[l]||0)+ex[l]; load+=counts[l]*WT[l]; total+=counts[l]; });
+  const required={beds:total, nurses:Math.ceil(load/6), physicians:Math.ceil(load/12)}, av=req.available, gaps={}; let pressure=0;
+  for(const k in required){ gaps[k]=Math.max(required[k]-av[k],0); pressure=Math.max(pressure, required[k]/Math.max(av[k],1)); }
+  const recs=[];
+  if(gaps.beds) recs.push({en:`Open ${gaps.beds} more bed(s).`, ar:`فتح ${gaps.beds} سرير إضافي.`});
+  if(gaps.nurses) recs.push({en:`Call in ${gaps.nurses} more nurse(s).`, ar:`استدعاء ${gaps.nurses} ممرضة/ممرض إضافي.`});
+  if(gaps.physicians) recs.push({en:`Add ${gaps.physicians} physician(s) to the shift.`, ar:`إضافة ${gaps.physicians} طبيب للمناوبة.`});
+  if(!recs.length) recs.push({en:"Current resources cover the expected load.", ar:"الموارد الحالية تغطي الحمل المتوقع."});
+  return {patients_by_ctas:counts, required, available:av, gaps, risk: pressure<0.8 ? "low" : pressure<1 ? "medium" : "high", recommendations:recs,
+    assumptions:"Placeholder acuity weights and staffing ratios. Not clinically validated."};
+}
+/* ===== MOCK COPY of the backend's scribe mock (keyword matching, not a model). Replaced by POST /scribe ===== */
+function mockScribe(tr){
+  const ICD = [[["chest pain","ألم في الصدر","ألم الصدر"],"R07.9","Chest pain, unspecified"],[["fever","حمى","حرارة"],"R50.9","Fever, unspecified"],
+    [["headache","صداع"],"R51.9","Headache, unspecified"],[["shortness of breath","ضيق في التنفس","ضيق نفس"],"R06.02","Shortness of breath"],
+    [["abdominal pain","ألم في البطن"],"R10.9","Unspecified abdominal pain"],[["cough","كحة","سعال"],"R05.9","Cough, unspecified"],[["syncope","إغماء"],"R55","Syncope and collapse"]];
+  const VIT = ["blood pressure","temperature","pulse","spo2","ضغط الدم","درجة الحرارة","نبض","أكسجين"];
+  const PLAN = ["plan","order","prescribe","refer","follow up","خطة","نطلب","نصرف","نحول","نحوّل","متابعة","تحليل","أشعة"];
+  const REQ = {allergies:[["allerg","حساسية"],"Allergies not documented.","الحساسية غير موثقة."],
+    medications:[["medication","medicine","دواء","أدوية"],"Current medications not documented.","الأدوية الحالية غير موثقة."],
+    vitals:[VIT,"Vital signs not documented.","العلامات الحيوية غير موثقة."], plan:[PLAN,"Plan not documented.","خطة العلاج غير موثقة."]};
+  const has = (t,w) => w.some(x => t.includes(x)), low = tr.toLowerCase(), pat = [], doc = [];
+  tr.split(/\r?\n/).forEach(line => {
+    let m = line.match(/^\s*(patient|المريض|مريض)\s*[:：]\s*(.*)$/i);
+    if(m) pat.push(m[2].trim()); else if((m = line.match(/^\s*(doctor|dr|الطبيب|طبيب|الدكتور|دكتور)\s*[:：]\s*(.*)$/i))) doc.push(m[2].trim());
+  });
+  const obj = doc.filter(d => has(d.toLowerCase(), VIT.concat(["exam","فحص"]))), plan = doc.filter(d => has(d.toLowerCase(), PLAN));
+  const icd10 = ICD.filter(r => has(low, r[0])).map(r => ({code:r[1], description:r[2], confidence:0.5})), nd = "Not documented";
+  return {source:"mock", icd10, soap:{subjective:pat.join(" ")||nd, objective:obj.join(" ")||nd, assessment:icd10.map(i=>i.description).join("; ")||nd, plan:plan.join(" ")||nd},
+    gaps:Object.keys(REQ).filter(f => !has(low, REQ[f][0])).map(f => ({field:f, en:REQ[f][1], ar:REQ[f][2]}))};
+}
+/* ===== PLACEHOLDER (Wajd): replaced by GET /alerts ===== */
+function mockAlerts(){
+  const n = Date.now()/1000;
+  return [{id:2,kind:"doc_gap",severity:"medium",message:"Documentation gaps found: allergies, plan",status:"new",created_at:n-900},
+          {id:1,kind:"surge",severity:"medium",message:"Expected surge: about 19.0 arrivals/hour around 18:00.",status:"notified",created_at:n-5400}];
+}
+
+
+/* ===== UI ===== */
+const $ = id => document.getElementById(id);
+const esc = x => String(x).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+/* Display wording: keeps backend text consistent with our UI copy, without touching the backend */
+const tidy = t => String(t).replace("فتح أو تفريغ","فتح").replace("Open or free","Open");
+const hhmm = t => /^\d{1,2}:\d{2}/.test(t) ? t.slice(0,5) : String(new Date(t).getHours()).padStart(2,"0")+":00";
+const IC = {sun:"M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z", moon:"M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z", cc:"M3 12h4l2-6 4 12 2-6h6", flow:"M3 17l6-6 4 4 8-8M15 7h6v6", res:"M3 18v-7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7M3 14h18M3 18v2M21 18v2", sc:"M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3", out:"M10 4H5v16h5M15 8l4 4-4 4M19 12H9"};
+const ic = n => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[n]}"/></svg>`;
+const NAV = {cc:"Command center", flow:"Patient flow forecast", res:"Resource planning", sc:"AI Scribe"};
+const ecg = n => { let d=""; for(let i=0;i<n;i++){ const o=i*240; d+=`M${o} 30H${o+60}L${o+76} 8L${o+86} 52L${o+94} 30H${o+240}`; } return d; };
+const pulseSvg = (n,h) => `<svg viewBox="0 0 ${n*240} 60" style="height:${h}px;width:${n*240*h/60}px"><path d="${ecg(n)}"/></svg>`;
+const CL = ["","var(--c1)","var(--c2)","var(--c3)","var(--c4)","var(--c5)"], TGT = [0,0,15,30,60,120];
+const RC = {low:"var(--teal)", medium:"var(--am)", high:"var(--pk)"}, SPD = {low:"6s", medium:"3.6s", high:"2s"};
+const BASE = {1:1,2:3,3:8,4:6,5:2};
+const S = {view:"cc", extra:0, beds:30, nurses:8, phys:4, fc:null, upd:null, sc:{n:0, busy:false, note:null, ok:{}, icd:{}, src:null, rec:false, err:""}};
+const sim = (extra, av) => API.simulate({extra_patients:extra, available:av || {beds:S.beds, nurses:S.nurses, physicians:S.phys}, patients_by_ctas:BASE});
+const pressure = r => Math.max(...Object.keys(r.required).map(k => r.required[k]/Math.max(r.available[k],1)));
+const waitMin = r => Math.round(12+40*Math.max(0, pressure(r)-.5));   // placeholder estimate, not validated
+function setRisk(k){ const s=document.documentElement.style; s.setProperty("--risk",RC[k]); s.setProperty("--spd",SPD[k]); }
+const rk = k => `<span class="rk" style="background:${RC[k]}">${k.toUpperCase()}</span>`;
+
+/* theme */
+function setTheme(t){ document.documentElement.dataset.theme=t; try{localStorage.setItem("pf_theme",t)}catch(e){}
+  const l = t==="dark" ? ic("sun")+"Light mode" : ic("moon")+"Dark mode"; $("th").innerHTML=l; $("th2").innerHTML=l; }
+["th","th2"].forEach(i => $(i).addEventListener("click", () => setTheme(document.documentElement.dataset.theme==="dark" ? "light" : "dark")));
+{ let t="dark"; try{ t=localStorage.getItem("pf_theme")||"dark"; }catch(e){} setTheme(t); }
+
+/* login */
+function tryLogin(){
+  const u=$("u").value.trim().toLowerCase(), p=$("pw").value;
+  if(u===DEMO_ACCESS.user.toLowerCase() && p===DEMO_ACCESS.pass){ try{sessionStorage.setItem("pf_in","1")}catch(e){} enter(); }
+  else{ $("err").textContent="Incorrect username or password."; const f=$("lf"); f.classList.remove("shake"); void f.offsetWidth; f.classList.add("shake"); }
+}
+$("go").addEventListener("click", tryLogin);
+["u","pw"].forEach(i => $(i).addEventListener("keydown", e => { if(e.key==="Enter") tryLogin(); }));
+$("lp").innerHTML = pulseSvg(8,70); $("tp").innerHTML = pulseSvg(8,34); document.querySelector(".lv .brand .pulse").innerHTML = pulseSvg(2,22);
+document.querySelectorAll(".nav[data-v]").forEach(b => { b.innerHTML = ic(b.dataset.v)+NAV[b.dataset.v]; b.addEventListener("click", () => go(b.dataset.v)); });
+$("out").innerHTML = ic("out")+"Sign out"; $("out").addEventListener("click", () => { try{sessionStorage.removeItem("pf_in")}catch(e){} $("app").hidden=true; $("login").hidden=false; $("pw").value=""; });
+async function enter(){ $("login").hidden=true; $("app").hidden=false; if(!S.fc) S.fc = await API.forecast(); $("mode").textContent = live ? "Live API" : "Demo mode"; $("mode").classList.toggle("live", live); go(S.view); }
+
+async function go(v){
+  S.view=v; S.upd=null; $("ttl").textContent=NAV[v];
+  document.querySelectorAll(".nav[data-v]").forEach(b => b.setAttribute("aria-current", b.dataset.v===v ? "page" : "false"));
+  $("view").innerHTML = '<p class="mu">Loading…</p>';
+  await ({cc:vCC, flow:vFlow, res:vRes, sc:vSc})[v]();
+}
+$("view").addEventListener("input", e => { const k=e.target.dataset.k; if(!k) return; S[k]=+e.target.value; const o=e.target.parentNode.querySelector("output"); if(o) o.textContent=e.target.value; if(S.upd) S.upd(); });
+$("view").addEventListener("click", e => { const b=e.target.closest("[data-a]"); if(!b) return; const sc=S.sc;
+  if(b.dataset.a==="play") playScribe();
+  if(b.dataset.a==="rec") toggleRec();
+  if(b.dataset.a==="soap") { sc.ok[b.dataset.k]=!sc.ok[b.dataset.k]; vSc(); }
+  if(b.dataset.a==="icd") { sc.icd[b.dataset.c]=b.dataset.v; vSc(); } });
+
+/* A. command center */
+async function vCC(){
+  const r = await sim(0), f=S.fc, thr=f.threshold, over=f.points.filter(p => p.expected>thr).length, pk=f.points.reduce((a,b) => b.expected>a.expected ? b : a);
+  setRisk(r.risk);
+  const occ=r.required.beds/r.available.beds, C=2*Math.PI*54, tot=Object.values(r.patients_by_ctas).reduce((a,b)=>a+b,0);
+  let tiles=[]; for(let l=1;l<=5;l++) for(let i=0;i<r.patients_by_ctas[l];i++) tiles.push(l);
+  const bedsHtml = Array.from({length:r.available.beds}, (_,i) => tiles[i] ? `<i style="background:${CL[tiles[i]]};border-color:${CL[tiles[i]]}" title="CTAS ${tiles[i]}"></i>` : "<i></i>").join("");
+  const Q = [["Q-07",2,"Chest pain",19],["Q-03",3,"Abdominal pain",34],["Q-11",2,"Breathing difficulty",8],["Q-05",4,"Wrist injury",41],["Q-09",3,"Head injury",12],["Q-02",5,"Sore throat",64]].sort((a,b)=>a[1]-b[1]||b[3]-a[3]);
+  const meter = (n,req,av) => `<div class="meter ${req>av?"bad":""}"><div style="display:flex;justify-content:space-between"><span>${n}</span><span class="num">${av} on shift · ${req} needed</span></div><div class="t"><i style="width:${Math.min(req/av*100,100)}%"></i></div></div>`;
+  $("view").innerHTML = `<div class="cc">
+   <section class="panel ring"><div class="lbl" style="position:absolute;top:20px;left:20px">Occupancy</div>
+    <svg width="150" height="150" viewBox="0 0 130 130"><circle cx="65" cy="65" r="54" fill="none" stroke="var(--p2)" stroke-width="10"/><circle cx="65" cy="65" r="54" fill="none" stroke="${RC[r.risk]}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C*Math.min(occ,1)} ${C}" transform="rotate(-90 65 65)" style="transition:stroke-dasharray .6s"/></svg>
+    <div class="v"><b class="num">${Math.round(occ*100)}%</b><span class="mu" style="font-size:12px">${tot} of ${r.available.beds} beds</span></div></section>
+   <section class="panel"><div class="lbl">ED floor · beds by CTAS</div><div class="beds">${bedsHtml}</div>
+    <div class="strip"><div><b class="num">${tot}</b><span>Patients in department</span></div><div><b class="num">${Math.max(r.available.beds-tot,0)}</b><span>Beds available</span></div><div><b class="num">~${waitMin(r)} min</b><span>Est. waiting time</span></div><div><b class="num">${pk.expected.toFixed(1)}/hr</b><span>Peak arrivals at ${hhmm(pk.time)}</span></div></div></section>
+   <section class="panel"><div class="lbl">Predicted congestion <span class="tag">Estimate</span></div>
+    <div class="alert"><b>${over ? over+" hours above threshold" : "No hours above threshold"}</b><div class="mu">${over ? "Exceeds "+thr+" arrivals/hr. Prepare staff before "+hhmm(pk.time)+"." : "Within the "+thr+" arrivals/hr threshold."}</div></div>
+    ${meter("Nurses",r.required.nurses,r.available.nurses)}${meter("Physicians",r.required.physicians,r.available.physicians)}</section></div>
+   <div class="two" style="grid-template-columns:1fr 1.2fr">
+   <section class="panel"><div class="lbl">CTAS acuity mix · 1 = most urgent</div><div class="stack">${[1,2,3,4,5].map(l => `<i style="width:${r.patients_by_ctas[l]/tot*100}%;background:${CL[l]}"></i>`).join("")}</div>
+    <div class="key">${[1,2,3,4,5].map(l => `<span><s style="background:${CL[l]}"></s>CTAS ${l}: <b class="num">${r.patients_by_ctas[l]}</b></span>`).join("")}</div>
+    <p class="mu" style="font-size:13px;margin-top:14px">Capacity: ${r.gaps.nurses||r.gaps.physicians||r.gaps.beds ? "demand exceeds available resources." : "within limits."}</p>
+    <div class="lbl" style="margin-top:22px">Next 24 hours · arrivals per hour <span class="tag">Simulated</span></div>
+    <div style="position:relative;height:120px;display:flex;align-items:flex-end;gap:3px">${f.points.map(p => `<i title="${hhmm(p.time)}: ${p.expected}" style="flex:1;height:${p.expected/(Math.max(...f.points.map(q=>q.expected),thr)*1.1)*100}%;background:${p.expected>thr?"var(--pk)":"var(--teal)"};border-radius:3px 3px 0 0"></i>`).join("")}<span style="position:absolute;left:0;right:0;bottom:${thr/(Math.max(...f.points.map(q=>q.expected),thr)*1.1)*100}%;border-top:1px dashed var(--tx)"></span></div>
+    <div class="key" style="justify-content:space-between;margin-top:6px"><span>${hhmm(f.points[0].time)}</span><span>${hhmm(f.points[12].time)}</span><span>${hhmm(f.points[23].time)}</span></div></section>
+   <section class="panel"><div class="lbl">Patient queue <span class="tag">Simulated</span></div>${Q.map(q => `<div class="q"><div class="dot" style="background:${CL[q[1]]}">${q[1]}</div><div>${q[2]}<div class="mu" style="font-size:12px">${q[0]} · target ${q[1]===1?"immediate":TGT[q[1]]+" min"}</div></div><div class="num ${q[3]>TGT[q[1]]?"late":""}">${q[3]} min</div></div>`).join("")}</section></div>`;
+}
+
+/* B. patient flow */
+function hist(){ const t0=new Date(S.fc.points[0].time).getTime(); return Array.from({length:12}, (_,i) => { const h=new Date(t0+(i-12)*36e5).getHours(); return Math.round((12+7*Math.sin(2*Math.PI*(h-12)/24)+Math.sin(i*12.9898)*1.2)*10)/10; }); }
+function chart(extra){
+  const f=S.fc, P=f.points, thr=f.threshold, H=hist(), n=H.length+P.length, W=760, Ht=300, L=34, R=10, T=14, B=28;
+  const sc = P.map((p,i) => p.expected+(i<6 ? extra/6 : 0)), ymax = Math.ceil(Math.max(...P.map(p=>p.upper), ...sc, thr)*1.1/5)*5;
+  const X = i => L+i*(W-L-R)/(n-1), Y = v => T+(Ht-T-B)*(1-v/ymax), bw=(W-L-R)/(n-1), o=12; let s="";
+  for(let v=0; v<=ymax; v+=5) s += `<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="var(--mu)">${v}</text>`;
+  sc.forEach((v,i) => { if(v>thr) s += `<rect x="${X(o+i)-bw/2}" y="${T}" width="${bw}" height="${Ht-T-B}" fill="#F2709C" opacity=".14"/>`; });
+  s += `<polygon fill="#3FB5B2" opacity=".18" points="${P.map((p,i)=>X(o+i)+","+Y(p.upper)).join(" ")} ${P.map((p,i)=>[X(o+i),Y(p.lower)]).reverse().map(a=>a.join(",")).join(" ")}"/>`;
+  s += `<line x1="${X(o-.5)}" x2="${X(o-.5)}" y1="${T}" y2="${Ht-B}" stroke="var(--mu)" stroke-dasharray="2 4"/><text x="${X(o-.5)+6}" y="${T+10}" font-size="11" fill="var(--mu)">Now</text>`;
+  s += `<line x1="${L}" x2="${W-R}" y1="${Y(thr)}" y2="${Y(thr)}" stroke="var(--tx)" stroke-dasharray="6 4"/><text x="${W-R}" y="${Y(thr)-5}" text-anchor="end" font-size="11" fill="var(--tx)">Threshold ${thr}</text>`;
+  s += `<polyline fill="none" stroke="#6399C5" stroke-width="2.5" points="${H.map((v,i)=>X(i)+","+Y(v)).join(" ")}"/>`;
+  s += `<polyline fill="none" stroke="#3FB5B2" stroke-width="3" points="${P.map((p,i)=>X(o+i)+","+Y(p.expected)).join(" ")}"/>`;
+  if(extra>0) s += `<polyline fill="none" stroke="#F2709C" stroke-width="3" stroke-dasharray="7 4" points="${sc.map((v,i)=>X(o+i)+","+Y(v)).join(" ")}"/>`;
+  P.forEach((p,i) => { if(i%4===0) s += `<text x="${X(o+i)}" y="${Ht-8}" text-anchor="middle" font-size="11" fill="var(--mu)">${hhmm(p.time)}</text>`; });
+  return {svg:`<svg viewBox="0 0 ${W} ${Ht}" role="img" aria-label="Arrivals per hour: simulated history, forecast with range, threshold, and what-if scenario">${s}</svg>`, over:sc.filter(v=>v>thr).length};
+}
+async function vFlow(){
+  $("view").innerHTML = `<div class="two"><section class="panel"><div class="lbl">Arrivals per hour: history vs forecast <span class="tag">Simulated</span></div><div class="cw" id="fc"></div>
+   <div class="key" style="margin-top:8px"><span><s style="background:#6399C5"></s>Simulated history</span><span><s style="background:#3FB5B2"></s>Forecast</span><span><s style="background:#F2709C"></s>With extra patients</span><span><s style="background:var(--tx)"></s>Threshold</span></div><div class="strip" id="fk"></div></section>
+   <section class="panel"><div class="lbl">What if <span class="tag">Simulation</span></div><h3>Additional arrivals (next 6 hours)</h3>
+   <div class="ctl"><label for="ex">Additional patients <output class="num">${S.extra}</output></label><input id="ex" type="range" min="0" max="60" value="${S.extra}" data-k="extra"></div>
+   <p class="mu" style="font-size:13px">Simulated estimates. Not clinically validated.</p><div id="fr"></div></section></div>`;
+  S.upd = updFlow; await updFlow();
+}
+async function updFlow(){
+  const r = await sim(S.extra), c = chart(S.extra); setRisk(r.risk);
+  $("fc").innerHTML = c.svg;
+  $("fk").innerHTML = `<div><b class="num">${Math.round(r.required.beds/r.available.beds*100)}%</b><span>Projected bed demand</span></div><div><b class="num">~${waitMin(r)} min</b><span>Est. waiting time</span></div><div><b class="num">${c.over}</b><span>Hours above threshold</span></div><div>${rk(r.risk)}<br><span>Risk level</span></div>`;
+  $("fr").innerHTML = `<div class="lbl" style="margin-top:14px">Recommendations</div>` + r.recommendations.map(x => `<div class="rec">${esc(tidy(x.en))}<span class="ar" lang="ar">${esc(tidy(x.ar))}</span></div>`).join("") + `<p class="mu" style="font-size:12px">Assumptions: ${esc(r.assumptions)}</p>`;
+}
+
+/* C. resource planning */
+async function vRes(){
+  const sl = (k,l,mn,mx) => `<div class="ctl"><label for="s${k}">${l} <output class="num">${S[k]}</output></label><input id="s${k}" type="range" min="${mn}" max="${mx}" value="${S[k]}" data-k="${k}"></div>`;
+  $("view").innerHTML = `<div class="two" style="grid-template-columns:1fr 2.2fr"><section class="panel"><div class="lbl">Current resources <span class="tag">Simulation</span></div>${sl("beds","Beds",10,60)}${sl("nurses","Nurses",2,24)}${sl("phys","Physicians",1,12)}${sl("extra","Additional arrivals",0,60)}
+   <div class="lbl" style="margin-top:20px">CTAS priority ladder</div><div id="lad"></div></section><section><div class="three" id="scn"></div><p class="mu" style="font-size:13px">Placeholder ratios. Not clinically validated.</p></section></div>`;
+  S.upd = updRes; await updRes();
+}
+async function updRes(){
+  const A = {beds:S.beds, nurses:S.nurses, physicians:S.phys}, sc = [["Current staffing",A],["Add 2 nurses",{...A,nurses:A.nurses+2}],["Add 2 nurses + 1 physician",{...A,nurses:A.nurses+2,physicians:A.physicians+1}]];
+  const R = await Promise.all(sc.map(x => sim(S.extra, x[1]))); setRisk(R[0].risk);
+  const bar = (n,r,a) => `<div class="meter ${r>a?"bad":""}"><div style="display:flex;justify-content:space-between"><span>${n}</span><span class="num">${a} / ${r} needed</span></div><div class="t"><i style="width:${Math.min(a/Math.max(r,1)*100,100)}%"></i></div></div>`;
+  $("scn").innerHTML = R.map((r,i) => `<section class="panel scn"><h3>${sc[i][0]}</h3>${rk(r.risk)}<div style="margin-top:10px">${bar("Beds",r.required.beds,r.available.beds)}${bar("Nurses",r.required.nurses,r.available.nurses)}${bar("Physicians",r.required.physicians,r.available.physicians)}</div>${r.recommendations.slice(0,2).map(x => `<div class="rec">${esc(tidy(x.en))}<span class="ar" lang="ar">${esc(tidy(x.ar))}</span></div>`).join("")}</section>`).join("");
+  const p = R[0].patients_by_ctas;
+  $("lad").innerHTML = [1,2,3,4,5].map(l => `<div class="q"><div class="dot" style="background:${CL[l]}">${l}</div><div>CTAS ${l}<div class="mu" style="font-size:12px">Target: ${l===1?"immediate":TGT[l]+" min"}</div></div><div class="num">${p[l]}</div></div>`).join("");
+}
+
+/* D. AI scribe (fictional Arabic encounter) */
+const TR = ["الطبيب: صباح الخير، وش اللي جابك اليوم؟","المريض: عندي ألم في الصدر من الصبح، وضيق في التنفس إذا مشيت.","الطبيب: هل عندك حساسية من أي شي؟","المريض: لا، ما عندي حساسية.","الطبيب: ضغط الدم 150 على 95 والنبض 96. نطلب تخطيط قلب الحين."];
+async function playScribe(){
+  const sc=S.sc; Object.assign(sc,{n:0,busy:true,note:null,ok:{},icd:{},src:null,err:""}); vSc();
+  for(let i=1;i<=TR.length;i++){ await new Promise(r => setTimeout(r,650)); sc.n=i; vSc(); }
+  sc.note = await API.scribe(TR.join("\n")); sc.busy=false; vSc();
+}
+let _rec=null, _chunks=[];
+async function toggleRec(){
+  const sc=S.sc;
+  if(sc.rec){ _rec.stop(); return; }
+  sc.err="";
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    _rec = new MediaRecorder(stream); _chunks=[];
+    _rec.ondataavailable = e => _chunks.push(e.data);
+    _rec.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop()); sc.rec=false; sc.busy=true; sc.note=null; sc.ok={}; sc.icd={}; vSc();
+      try{
+        const text = await API.transcribe(new Blob(_chunks,{type:_rec.mimeType||"audio/webm"}));
+        sc.src = text; sc.n = 0; vSc();
+        sc.note = await API.scribe(text);
+      }catch(e){
+        sc.err = API_BASE ? "Transcription failed. Try again or use the demo encounter." : "Speech-to-text is not connected in demo mode. Use the demo encounter.";
+      }
+      sc.busy=false; vSc();
+    };
+    _rec.start(); sc.rec=true; sc.src=null; vSc();
+  }catch(e){ sc.err="Microphone unavailable. It needs HTTPS or localhost and permission."; vSc(); }
+}
+function vSc(){
+  const sc=S.sc, n=sc.note, F=["allergies","medications","vitals","plan"], miss=n ? n.gaps.map(g => g.field) : [];
+  const done = n ? ["s","o","a","p"].filter(k => sc.ok[k]).length : 0;
+  const soap = n ? [["s","Subjective",n.soap.subjective],["o","Objective",n.soap.objective],["a","Assessment",n.soap.assessment],["p","Plan",n.soap.plan]].map(([k,h,t]) => `<div class="blk ${sc.ok[k]?"done":""}"><h3>${h}${sc.ok[k] ? '<span class="tag ok" style="margin:0">Clinician approved</span>' : '<span class="tag ai" style="margin:0">AI suggestion</span>'}</h3><p>${esc(t)}</p><button class="btn g s" style="margin-top:8px" data-a="soap" data-k="${k}">${sc.ok[k]?"Undo approval":"Approve"}</button></div>`).join("") : "";
+  const icd = n ? `<table><tr><th>Code</th><th>Description</th><th></th></tr>${n.icd10.map(c => `<tr><td class="num">${esc(c.code)}</td><td>${esc(c.description)}</td><td>${sc.icd[c.code]==="ok" ? '<span class="tag ok">Accepted</span>' : sc.icd[c.code]==="no" ? '<span class="tag">Rejected</span>' : `<button class="btn g s" data-a="icd" data-c="${esc(c.code)}" data-v="ok">Accept</button> <button class="btn g s" data-a="icd" data-c="${esc(c.code)}" data-v="no">Reject</button>`}</td></tr>`).join("")}</table>` : "";
+  $("view").innerHTML = `<div class="two" style="grid-template-columns:1fr 1.3fr"><section class="panel"><div class="lbl">Encounter <span class="tag">${sc.src ? "Live transcription" : "Simulated transcription"}</span></div>
+   <div class="tr" dir="rtl" lang="ar">${sc.src ? `<p>${esc(sc.src)}</p>` : sc.n ? TR.slice(0,sc.n).map(l => `<p>${esc(l)}</p>`).join("") : '<span class="mu">اضغط تشغيل لبدء المحادثة</span>'}</div>
+   <button class="btn" data-a="play" ${sc.busy?"disabled":""}>${sc.busy ? "Working…" : n ? "Replay encounter" : "Play encounter"}</button>
+   <button class="btn g" data-a="rec" style="margin-inline-start:8px" ${sc.busy?"disabled":""}>${sc.rec ? "■ Stop recording" : "● Record with mic"}</button>
+   ${sc.err ? `<p class="err" role="alert" style="margin-top:10px">${esc(sc.err)}</p>` : ""}
+   <p class="mu" style="font-size:12px;margin-top:12px">${sc.src ? "Audio transcribed by the backend. Synthetic or consented test audio only." : "Demo encounter is simulated. Use the mic button once the backend /transcribe is connected."}</p></section>
+   <section class="panel"><div class="lbl">Draft documentation</div>${!n ? `<div class="empty">${sc.busy ? "Drafting note…" : "No draft available. Play the encounter to generate one."}</div>` : `
+   <div class="alert" style="--risk:var(--cy)"><b>AI draft · Pending clinician review</b><div class="mu">${done} of 4 sections approved.</div></div>
+   <div class="lbl">Documentation completeness: ${F.length-miss.length}/4 · compliance check</div>${F.map(f => `<div class="chk"><span style="color:${miss.includes(f)?"var(--pk)":"var(--teal)"}">${miss.includes(f)?"✗":"✓"}</span><span style="text-transform:capitalize">${f}</span></div>`).join("")}
+   ${n.gaps.map(g => `<div class="rec" style="border-left:3px solid var(--pk);padding-left:10px">${esc(g.en)}<span class="ar" lang="ar">${esc(g.ar)}</span></div>`).join("")}
+   <div class="lbl" style="margin-top:16px">SOAP note</div>${soap}<div class="lbl" style="margin-top:16px">Suggested ICD-10 codes <span class="tag ai">AI suggestion</span></div>${icd}`}</section></div>`;
+}
+
+/* start */
+try{ if(sessionStorage.getItem("pf_in")==="1") enter(); }catch(e){}
+</script>
+</body>
+</html>
