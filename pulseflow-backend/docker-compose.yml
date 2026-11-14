@@ -1,0 +1,17 @@
+services:
+  api:
+    build: .
+    env_file: .env
+    ports: ["8000:8000"]
+    volumes: ["api_data:/data"]
+    depends_on: [n8n]
+  n8n:
+    image: n8nio/n8n:latest
+    ports: ["5678:5678"]
+    environment:
+      - GENERIC_TIMEZONE=Asia/Riyadh
+      - TZ=Asia/Riyadh
+    volumes: ["n8n_data:/home/node/.n8n"]
+volumes:
+  api_data:
+  n8n_data:
