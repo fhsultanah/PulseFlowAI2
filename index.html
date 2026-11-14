@@ -105,6 +105,13 @@ const post = (path, body) => call(path, {method:"POST", headers:{"Content-Type":
 const API = {
   async forecast(){ try{ return await call("/forecast?hours=24"); }catch(e){ live = false; return mockForecast(); } },
   async simulate(req){ try{ return await post("/simulate", req); }catch(e){ return mockSimulate(req); } },
+  async transcribe(blob){
+    if(!API_BASE) throw new Error("mock");
+    const fd = new FormData(); fd.append("file", blob, "visit.webm");
+    const c = new AbortController(), t = setTimeout(() => c.abort(), 30000);
+    try{ const r = await fetch(API_BASE+"/transcribe", {method:"POST", body:fd, signal:c.signal}); if(!r.ok) throw new Error(r.status); return (await r.json()).text; }
+    finally{ clearTimeout(t); }
+  },
   async scribe(text){ try{ return await post("/scribe", {transcript:text}); }catch(e){ return mockScribe(text); } },
   async check(){ try{ return await post("/alerts/check?hours=12", {}); }catch(e){ return {triggered:false, reason:"mock_mode"}; } },
   async alerts(){ try{ return await call("/alerts"); }catch(e){ return mockAlerts(); } }
@@ -182,7 +189,7 @@ const pulseSvg = (n,h) => `<svg viewBox="0 0 ${n*240} 60" style="height:${h}px;w
 const CL = ["","var(--c1)","var(--c2)","var(--c3)","var(--c4)","var(--c5)"], TGT = [0,0,15,30,60,120];
 const RC = {low:"var(--teal)", medium:"var(--am)", high:"var(--pk)"}, SPD = {low:"6s", medium:"3.6s", high:"2s"};
 const BASE = {1:1,2:3,3:8,4:6,5:2};
-const S = {view:"cc", extra:0, beds:30, nurses:8, phys:4, fc:null, upd:null, sc:{n:0, busy:false, note:null, ok:{}, icd:{}}};
+const S = {view:"cc", extra:0, beds:30, nurses:8, phys:4, fc:null, upd:null, sc:{n:0, busy:false, note:null, ok:{}, icd:{}, src:null, rec:false, err:""}};
 const sim = (extra, av) => API.simulate({extra_patients:extra, available:av || {beds:S.beds, nurses:S.nurses, physicians:S.phys}, patients_by_ctas:BASE});
 const pressure = r => Math.max(...Object.keys(r.required).map(k => r.required[k]/Math.max(r.available[k],1)));
 const waitMin = r => Math.round(12+40*Math.max(0, pressure(r)-.5));   // placeholder estimate, not validated
@@ -217,6 +224,7 @@ async function go(v){
 $("view").addEventListener("input", e => { const k=e.target.dataset.k; if(!k) return; S[k]=+e.target.value; const o=e.target.parentNode.querySelector("output"); if(o) o.textContent=e.target.value; if(S.upd) S.upd(); });
 $("view").addEventListener("click", e => { const b=e.target.closest("[data-a]"); if(!b) return; const sc=S.sc;
   if(b.dataset.a==="play") playScribe();
+  if(b.dataset.a==="rec") toggleRec();
   if(b.dataset.a==="soap") { sc.ok[b.dataset.k]=!sc.ok[b.dataset.k]; vSc(); }
   if(b.dataset.a==="icd") { sc.icd[b.dataset.c]=b.dataset.v; vSc(); } });
 
@@ -299,19 +307,44 @@ async function updRes(){
 /* D. AI scribe (fictional Arabic encounter) */
 const TR = ["الطبيب: صباح الخير، وش اللي جابك اليوم؟","المريض: عندي ألم في الصدر من الصبح، وضيق في التنفس إذا مشيت.","الطبيب: هل عندك حساسية من أي شي؟","المريض: لا، ما عندي حساسية.","الطبيب: ضغط الدم 150 على 95 والنبض 96. نطلب تخطيط قلب الحين."];
 async function playScribe(){
-  const sc=S.sc; Object.assign(sc,{n:0,busy:true,note:null,ok:{},icd:{}}); vSc();
+  const sc=S.sc; Object.assign(sc,{n:0,busy:true,note:null,ok:{},icd:{},src:null,err:""}); vSc();
   for(let i=1;i<=TR.length;i++){ await new Promise(r => setTimeout(r,650)); sc.n=i; vSc(); }
   sc.note = await API.scribe(TR.join("\n")); sc.busy=false; vSc();
+}
+let _rec=null, _chunks=[];
+async function toggleRec(){
+  const sc=S.sc;
+  if(sc.rec){ _rec.stop(); return; }
+  sc.err="";
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    _rec = new MediaRecorder(stream); _chunks=[];
+    _rec.ondataavailable = e => _chunks.push(e.data);
+    _rec.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop()); sc.rec=false; sc.busy=true; sc.note=null; sc.ok={}; sc.icd={}; vSc();
+      try{
+        const text = await API.transcribe(new Blob(_chunks,{type:_rec.mimeType||"audio/webm"}));
+        sc.src = text; sc.n = 0; vSc();
+        sc.note = await API.scribe(text);
+      }catch(e){
+        sc.err = API_BASE ? "Transcription failed. Try again or use the demo encounter." : "Speech-to-text is not connected in demo mode. Use the demo encounter.";
+      }
+      sc.busy=false; vSc();
+    };
+    _rec.start(); sc.rec=true; sc.src=null; vSc();
+  }catch(e){ sc.err="Microphone unavailable. It needs HTTPS or localhost and permission."; vSc(); }
 }
 function vSc(){
   const sc=S.sc, n=sc.note, F=["allergies","medications","vitals","plan"], miss=n ? n.gaps.map(g => g.field) : [];
   const done = n ? ["s","o","a","p"].filter(k => sc.ok[k]).length : 0;
   const soap = n ? [["s","Subjective",n.soap.subjective],["o","Objective",n.soap.objective],["a","Assessment",n.soap.assessment],["p","Plan",n.soap.plan]].map(([k,h,t]) => `<div class="blk ${sc.ok[k]?"done":""}"><h3>${h}${sc.ok[k] ? '<span class="tag ok" style="margin:0">Clinician approved</span>' : '<span class="tag ai" style="margin:0">AI suggestion</span>'}</h3><p>${esc(t)}</p><button class="btn g s" style="margin-top:8px" data-a="soap" data-k="${k}">${sc.ok[k]?"Undo approval":"Approve"}</button></div>`).join("") : "";
   const icd = n ? `<table><tr><th>Code</th><th>Description</th><th></th></tr>${n.icd10.map(c => `<tr><td class="num">${esc(c.code)}</td><td>${esc(c.description)}</td><td>${sc.icd[c.code]==="ok" ? '<span class="tag ok">Accepted</span>' : sc.icd[c.code]==="no" ? '<span class="tag">Rejected</span>' : `<button class="btn g s" data-a="icd" data-c="${esc(c.code)}" data-v="ok">Accept</button> <button class="btn g s" data-a="icd" data-c="${esc(c.code)}" data-v="no">Reject</button>`}</td></tr>`).join("")}</table>` : "";
-  $("view").innerHTML = `<div class="two" style="grid-template-columns:1fr 1.3fr"><section class="panel"><div class="lbl">Encounter <span class="tag">Simulated transcription</span></div>
-   <div class="tr" dir="rtl" lang="ar">${sc.n ? TR.slice(0,sc.n).map(l => `<p>${esc(l)}</p>`).join("") : '<span class="mu">اضغط تشغيل لبدء المحادثة</span>'}</div>
-   <button class="btn" data-a="play" ${sc.busy?"disabled":""}>${sc.busy ? "Transcribing…" : n ? "Replay encounter" : "Play encounter"}</button>
-   <p class="mu" style="font-size:12px;margin-top:12px">Audio is simulated. Speech-to-text is not connected.</p></section>
+  $("view").innerHTML = `<div class="two" style="grid-template-columns:1fr 1.3fr"><section class="panel"><div class="lbl">Encounter <span class="tag">${sc.src ? "Live transcription" : "Simulated transcription"}</span></div>
+   <div class="tr" dir="rtl" lang="ar">${sc.src ? `<p>${esc(sc.src)}</p>` : sc.n ? TR.slice(0,sc.n).map(l => `<p>${esc(l)}</p>`).join("") : '<span class="mu">اضغط تشغيل لبدء المحادثة</span>'}</div>
+   <button class="btn" data-a="play" ${sc.busy?"disabled":""}>${sc.busy ? "Working…" : n ? "Replay encounter" : "Play encounter"}</button>
+   <button class="btn g" data-a="rec" style="margin-inline-start:8px" ${sc.busy?"disabled":""}>${sc.rec ? "■ Stop recording" : "● Record with mic"}</button>
+   ${sc.err ? `<p class="err" role="alert" style="margin-top:10px">${esc(sc.err)}</p>` : ""}
+   <p class="mu" style="font-size:12px;margin-top:12px">${sc.src ? "Audio transcribed by the backend. Synthetic or consented test audio only." : "Demo encounter is simulated. Use the mic button once the backend /transcribe is connected."}</p></section>
    <section class="panel"><div class="lbl">Draft documentation</div>${!n ? `<div class="empty">${sc.busy ? "Drafting note…" : "No draft available. Play the encounter to generate one."}</div>` : `
    <div class="alert" style="--risk:var(--cy)"><b>AI draft · Pending clinician review</b><div class="mu">${done} of 4 sections approved.</div></div>
    <div class="lbl">Documentation completeness: ${F.length-miss.length}/4 · compliance check</div>${F.map(f => `<div class="chk"><span style="color:${miss.includes(f)?"var(--pk)":"var(--teal)"}">${miss.includes(f)?"✗":"✓"}</span><span style="text-transform:capitalize">${f}</span></div>`).join("")}
