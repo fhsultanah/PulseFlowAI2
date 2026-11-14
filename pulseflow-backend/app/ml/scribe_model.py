@@ -1,16 +1,17 @@
-"""Scribe model: SOAP note + ICD-10 suggestions + documentation gaps via Groq.
+"""Scribe model via Groq: speech-to-text, then SOAP note + ICD-10 suggestions + documentation gaps.
 
 Needs the env var GROQ_API_KEY (never write the key in code).
-Optional: GROQ_MODEL to change the model without editing this file.
-NOTE: transcripts are sent to an external API, so use synthetic data only.
+Optional: GROQ_MODEL (text model) and GROQ_STT_MODEL (speech model).
+NOTE: audio and transcripts are sent to an external API, so use synthetic data only.
 """
 import json
 import os
 
 from groq import Groq
 
-# Confirm the current model name in the Groq console (Docs > Models).
-DEFAULT_MODEL = "openai/gpt-oss-120b"
+# Tried in order; the first one that works is used. Confirm names in the Groq console (Docs > Models).
+TEXT_MODELS = ["openai/gpt-oss-120b", "llama-3.3-70b-versatile", "openai/gpt-oss-20b"]
+STT_MODEL = "whisper-large-v3"
 GAP_FIELDS = ["vitals", "allergies", "medications", "history", "symptom_details", "plan", "other"]
 
 SYSTEM_PROMPT = """You are an emergency-department medical scribe and documentation reviewer.
@@ -43,28 +44,48 @@ def _client():
     return Groq(api_key=key, timeout=30.0)
 
 
+def transcribe(filename: str, data: bytes) -> str:
+    """Audio bytes -> text (Whisper on Groq)."""
+    result = _client().audio.transcriptions.create(
+        file=(filename, data),
+        model=os.environ.get("GROQ_STT_MODEL", STT_MODEL),
+        response_format="text",
+    )
+    return result if isinstance(result, str) else getattr(result, "text", str(result))
+
+
+def _models():
+    chosen = os.environ.get("GROQ_MODEL")
+    return [chosen] + [m for m in TEXT_MODELS if m != chosen] if chosen else TEXT_MODELS
+
+
 def generate(transcript_text: str):
-    model = os.environ.get("GROQ_MODEL", DEFAULT_MODEL)
     client = _client()
     last_error = None
-    for _ in range(2):  # one retry if the model returns invalid JSON
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": f"Transcript:\n{transcript_text}"},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.1,
-        )
-        try:
-            result = json.loads(response.choices[0].message.content)
-            if isinstance(result, dict):
-                return {
-                    "soap": result.get("soap", {}),
-                    "icd10": result.get("icd10", []),
-                    "gaps": result.get("gaps", []),
-                }
-        except (json.JSONDecodeError, TypeError) as e:
-            last_error = e
-    raise ValueError(f"Model did not return valid JSON: {last_error}")
+    for model in _models():
+        for _ in range(2):  # one retry if the model returns invalid JSON
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": f"Transcript:\n{transcript_text}"},
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.1,
+                )
+                result = json.loads(response.choices[0].message.content)
+                if isinstance(result, dict):
+                    return {
+                        "soap": result.get("soap", {}),
+                        "icd10": result.get("icd10", []),
+                        "gaps": result.get("gaps", []),
+                    }
+            except (json.JSONDecodeError, TypeError) as e:
+                last_error = e            # bad JSON: retry the same model once
+            except Exception as e:
+                last_error = e
+                if getattr(e, "status_code", None) in (400, 404):
+                    break                  # model unavailable or unsupported: try the next one
+                raise                      # auth, network, rate limit: surface the real error
+    raise ValueError(f"No model returned a valid answer: {last_error}")

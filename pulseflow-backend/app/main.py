@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import config, db
@@ -44,6 +44,20 @@ def scribe(req: ScribeRequest):
     result = scribe_svc.generate(req.transcript)
     alert_svc.raise_doc_gap_alert(result["gaps"])
     return result
+
+
+@app.post("/transcribe")
+async def transcribe(file: UploadFile = File(...)):
+    """Speech-to-text for the web page's mic button. Needs SCRIBE_MOCK=0 and GROQ_API_KEY.
+    The audio is not stored."""
+    if config.SCRIBE_MOCK:
+        raise HTTPException(status_code=503, detail="Transcription needs SCRIBE_MOCK=0 and GROQ_API_KEY")
+    from .ml import scribe_model
+    data = await file.read()
+    try:
+        return {"text": scribe_model.transcribe(file.filename or "audio.webm", data)}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Transcription failed: {type(e).__name__}")
 
 
 @app.post("/alerts/check")
